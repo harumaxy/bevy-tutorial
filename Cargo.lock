@@ -249,6 +249,7 @@ name = "bevy-tutorial"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "bevy_discovery",
 ]
 
 [[package]]
@@ -347,6 +348,20 @@ dependencies = [
  "bevy_ecs",
  "bevy_utils",
  "parking_lot",
+]
+
+[[package]]
+name = "bevy_discovery"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f763294510a98c166814f8948609a34993b036ff28e50626adc0b16c19415ba3"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "ron",
+ "rustc-hash",
+ "serde",
+ "syn",
 ]
 
 [[package]]
