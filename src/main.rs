@@ -18,7 +18,9 @@ fn init_system(commands: &mut Commands) {
 }
 
 fn spam_spam_spam_system(query: Query<&Pos>) {
-    query.iter().for_each(|pos| print!("spam"));
+    query
+        .iter()
+        .for_each(|pos| print!("spam_spam_spam_spam_spam_spam_spam_spam"));
 }
 
 fn main() {
