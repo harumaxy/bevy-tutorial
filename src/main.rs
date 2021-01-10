@@ -21,10 +21,15 @@ fn spam_spam_spam_system(query: Query<&Pos>) {
     query.iter().for_each(|pos| print!("spam"));
 }
 
+fn i_am_the_master_system() {
+    println!("I am the Master!")
+}
+
 fn main() {
     App::build()
         .add_startup_system(init_system.system())
         .add_system(print_pos_system.system())
         .add_system(spam_spam_spam_system.system())
+        .add_system(i_am_the_master_system.system())
         .run();
 }
