@@ -1,4 +1,8 @@
-use bevy::{input::keyboard::KeyboardInput, prelude::*};
+use bevy::{
+    prelude::*,
+    window::{self, WindowMode},
+};
+use window::WindowResized;
 
 fn main() {
     App::build()
@@ -7,6 +11,8 @@ fn main() {
         .add_startup_system(spawn_ball.system())
         .add_system(ball_movement_system.system())
         .add_system(paddle_movement_system.system())
+        .add_system(print_window_descriptor.system())
+        .add_system(window_resize_listenr.system())
         .run()
 }
 
@@ -28,6 +34,21 @@ fn setup(commands: &mut Commands) {
     spawn_ball(commands);
     spawn_paddle(commands, Player::Right);
     spawn_paddle(commands, Player::Left);
+    commands.insert_resource(ClearColor(Color::BLACK)); // clear up Background Color (default = DARK_GRAY)
+    commands.insert_resource(WindowDescriptor {
+        title: "pong clone".to_string(),
+        width: 1280.,
+        height: 720.,
+        vsync: true,
+        resizable: true,
+        decorations: true,
+        cursor_locked: false,
+        cursor_visible: true,
+        mode: WindowMode::Windowed,
+        #[cfg(target_arch = "wasm32")]
+        canvas: None,
+    });
+    commands.insert_resource(EventReader::<WindowResized>::default());
 }
 
 fn ball_movement_system(time: Res<Time>, mut query: Query<(&Ball, &mut Transform)>) {
@@ -119,4 +140,19 @@ fn paddle_movement_system(
                 println!("Down!")
             }
         });
+}
+
+fn window_resize_listenr(
+    mut resize_listenr: ResMut<EventReader<WindowResized>>,
+    resize_events: Res<Events<WindowResized>>,
+) {
+    resize_listenr.latest(&resize_events).map(|event| {
+        // println!("{:?}", event);
+        println!("window resized to {:}x{:}", event.width, event.height);
+    });
+}
+
+fn print_window_descriptor(window_descriptor: Res<WindowDescriptor>) {
+    println!("{}", window_descriptor.width);
+    println!("{}", window_descriptor.height);
 }
