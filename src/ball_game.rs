@@ -2,14 +2,17 @@ use std::unimplemented;
 
 mod paddle;
 use paddle::*;
-
 mod ball;
 use ball::*;
+mod wall;
+use wall::*;
+mod goal;
+use goal::*;
 
 use bevy::{
+    diagnostic::{FrameTimeDiagnosticsPlugin, PrintDiagnosticsPlugin},
     prelude::*,
-    sprite::collide_aabb::{collide, Collision},
-    window::{self, WindowMode},
+    window::{self},
 };
 use window::WindowResized;
 
@@ -20,9 +23,12 @@ fn main() {
         .add_startup_system(spawn_ball.system())
         .add_system(ball_movement_system.system())
         .add_system(paddle_movement_system.system())
-        .add_system(print_window_descriptor.system())
+        .add_plugin(FrameTimeDiagnosticsPlugin::default())
+        .add_plugin(PrintDiagnosticsPlugin::default())
+        // .add_system(print_window_descriptor.system())
         .add_system(window_resize_listenr.system())
         .add_system(ball_collision_system.system())
+        .add_system(enter_goal.system())
         .run()
 }
 
@@ -46,40 +52,10 @@ fn setup(commands: &mut Commands) {
     spawn_ball(commands);
     spawn_paddle(commands, Player::Right);
     spawn_paddle(commands, Player::Left);
+    spwan_goals(commands);
+    spwan_walls(commands);
     commands.insert_resource(ClearColor(Color::BLACK)); // clear up Background Color (default = DARK_GRAY)
-    commands.insert_resource(WindowDescriptor {
-        title: "pong clone".to_string(),
-        width: 1280.,
-        height: 720.,
-        vsync: true,
-        resizable: true,
-        decorations: true,
-        cursor_locked: false,
-        cursor_visible: true,
-        mode: WindowMode::Windowed,
-        #[cfg(target_arch = "wasm32")]
-        canvas: None,
-    });
     commands.insert_resource(EventReader::<WindowResized>::default());
-}
-
-fn spawn_ball(commands: &mut Commands) {
-    const SIZE: f32 = 50.0;
-
-    commands
-        .spawn(SpriteBundle {
-            sprite: Sprite {
-                size: Vec2::new(SIZE, SIZE),
-                ..Default::default()
-            },
-            transform: Transform {
-                translation: Vec3::new(0.0, -100.0, 0.0),
-                rotation: Quat::from_rotation_z(std::f32::consts::PI / 4.0),
-                ..Default::default()
-            },
-            ..Default::default()
-        })
-        .with(Ball::default());
 }
 
 pub enum Player {
@@ -89,9 +65,10 @@ pub enum Player {
 
 impl Player {
     fn start_position(&self) -> Vec2 {
+        let window_width = 1280.;
         let x_position = match self {
-            Player::Left => -500.,
-            Player::Right => 500.,
+            Player::Left => -window_width / 2.0 + Paddle::WIDTH,
+            Player::Right => window_width / 2.0 - Paddle::WIDTH,
         };
         Vec2::new(x_position, 0.)
     }
@@ -104,37 +81,15 @@ impl Player {
     }
 }
 
-type PaddleBundle = (SpriteBundle, Paddle, Player, Collider);
-
-fn spawn_paddle(commands: &mut Commands, player: Player) {
-    let (sprite_bundle, paddle, player, collider): PaddleBundle = (
-        SpriteBundle {
-            sprite: Sprite {
-                size: Vec2::new(20., 200.),
-                ..Default::default()
-            },
-            transform: Transform {
-                translation: player.start_position().extend(0.),
-                ..Default::default()
-            },
-            ..Default::default()
-        },
-        Paddle { speed: 1280. / 3. },
-        player,
-        Collider::Paddle,
-    );
-    commands
-        .spawn((paddle, player, collider))
-        .with_bundle(sprite_bundle);
-}
-
 fn window_resize_listenr(
     mut resize_listenr: ResMut<EventReader<WindowResized>>,
     resize_events: Res<Events<WindowResized>>,
     mut paddles: Query<(&mut Sprite, &mut Transform, &mut Paddle, &Player)>,
     mut ball: Query<(&mut Sprite, &mut Transform, &mut Ball)>,
+    mut walls: Query<(&mut Sprite, &mut Transform, &mut Wall)>,
+    mut goals: Query<(&mut Sprite, &mut Transform, &mut Goal)>,
 ) {
-    resize_listenr.latest(&resize_events).map(|event| {
+    for event in resize_listenr.iter(&resize_events) {
         for (mut sprite, mut transform, mut paddle, player) in paddles.iter_mut() {
             paddle.update_after_window_resize(
                 player,
@@ -143,13 +98,20 @@ fn window_resize_listenr(
                 &mut transform.translation,
             );
         }
+        for (mut sprite, mut transform, mut wall) in walls.iter_mut() {
+            wall.update_after_window_resize(event, &mut sprite.size, &mut transform.translation)
+        }
+        for (mut sprite, mut transform, mut goal) in goals.iter_mut() {
+            goal.update_after_window_resize(event, &mut sprite.size, &mut transform.translation)
+        }
+
         for (mut sprite, mut transform, mut ball) in ball.iter_mut() {
             ball.update_after_window_resize(event, &mut sprite.size, &mut transform.translation)
         }
-    });
+    }
 }
 
-fn print_window_descriptor(window_descriptor: Res<WindowDescriptor>) {
-    // println!("{}", window_descriptor.width);
-    // println!("{}", window_descriptor.height);
-}
+// fn print_window_descriptor(window_descriptor: Res<WindowDescriptor>) {
+//     // println!("{}", window_descriptor.width);
+//     // println!("{}", window_descriptor.height);
+// }

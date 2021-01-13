@@ -1,6 +1,6 @@
 use bevy::{prelude::*, window::WindowResized};
 
-use crate::Player;
+use crate::{Collider, Player};
 
 #[derive(Default)]
 pub struct Paddle {
@@ -20,9 +20,10 @@ impl Paddle {
         translation_component: &mut Vec3,
     ) {
         let window_height = resize_event.height as f32;
+        let window_width = resize_event.width as f32;
         self.speed = (window_height as f32) / 3.;
         *size_component = Vec2::new(Paddle::WIDTH, 0.2 * window_height);
-        let horizontal_distance_from_center = (window_height / 2.0) - Paddle::MARGIN;
+        let horizontal_distance_from_center = (window_width / 2.0) - Paddle::MARGIN;
         use Player::*;
         let x_translation = match player {
             Left => -horizontal_distance_from_center,
@@ -44,10 +45,32 @@ pub fn paddle_movement_system(
             let dt = time.delta_seconds();
             if keyboard_input.pressed(up_keycode) {
                 transform.translation += Vec2::new(0.0, paddle.speed * dt).extend(0.);
-                println!("Up!")
             } else if keyboard_input.pressed(down_keycode) {
                 transform.translation += Vec2::new(0.0, -paddle.speed * dt).extend(0.);
-                println!("Down!")
             }
         });
+}
+
+pub type PaddleBundle = (SpriteBundle, Paddle, Player, Collider);
+
+pub fn spawn_paddle(commands: &mut Commands, player: Player) {
+    let (sprite_bundle, paddle, player, collider): PaddleBundle = (
+        SpriteBundle {
+            sprite: Sprite {
+                size: Vec2::new(20., 200.),
+                ..Default::default()
+            },
+            transform: Transform {
+                translation: player.start_position().extend(0.),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        Paddle { speed: 1280. / 3. },
+        player,
+        Collider::Paddle,
+    );
+    commands
+        .spawn((paddle, player, collider))
+        .with_bundle(sprite_bundle);
 }
