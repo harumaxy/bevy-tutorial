@@ -23,6 +23,7 @@ fn main() {
 struct Ball {
     velocity: Vec2,
 }
+
 enum Collider {
     Paddle,
     Wall,
@@ -89,6 +90,8 @@ struct Paddle;
 
 impl Paddle {
     const SPEED: f32 = 200.0;
+    const WIDTH: f32 = 20.0;
+    const MARGIN: f32 = 50.0;
 }
 
 enum Player {
@@ -111,24 +114,41 @@ impl Player {
             Player::Right => (KeyCode::Up, KeyCode::Down),
         }
     }
+
+    fn paddle_size_and_translation(&self, width: usize, height: usize) -> (Vec2, Vec3) {
+        let size = Vec2::new(Paddle::WIDTH, 0.2 * (height as f32));
+        let horizontal_distance_from_center = (width as f32 / 2.0) - Paddle::MARGIN;
+        let translation = match self {
+            Player::Left => Vec2::new(-horizontal_distance_from_center, Paddle::MARGIN),
+            Player::Right => Vec2::new(horizontal_distance_from_center, Paddle::MARGIN),
+        }
+        .extend(0.);
+        (size, translation)
+    }
 }
 
+type PaddleBundle = (SpriteBundle, Paddle, Player, Collider);
+
 fn spawn_paddle(commands: &mut Commands, player: Player) {
-    commands
-        .spawn(SpriteBundle {
+    let (sprite_bundle, paddle, player, collider): PaddleBundle = (
+        SpriteBundle {
             sprite: Sprite {
                 size: Vec2::new(20., 200.),
                 ..Default::default()
             },
+            transform: Transform {
+                translation: player.start_position().extend(0.),
+                ..Default::default()
+            },
             ..Default::default()
-        })
-        .with(Transform {
-            translation: player.start_position().extend(0.),
-            ..Default::default()
-        })
-        .with(player)
-        .with(Paddle)
-        .with(Collider::Paddle);
+        },
+        Paddle,
+        player,
+        Collider::Paddle,
+    );
+    commands
+        .spawn((paddle, player, collider))
+        .with_bundle(sprite_bundle);
 }
 
 fn paddle_movement_system(
@@ -154,16 +174,22 @@ fn paddle_movement_system(
 fn window_resize_listenr(
     mut resize_listenr: ResMut<EventReader<WindowResized>>,
     resize_events: Res<Events<WindowResized>>,
+    mut paddles: Query<(&mut Sprite, &mut Transform, &Paddle, &Player)>,
 ) {
     resize_listenr.latest(&resize_events).map(|event| {
-        // println!("{:?}", event);
+        for (mut sprite, mut transform, _paddle, player) in paddles.iter_mut() {
+            let (size, translation) =
+                player.paddle_size_and_translation(event.width as usize, event.height as usize);
+            sprite.size = size;
+            transform.translation = translation;
+        }
         println!("window resized to {:}x{:}", event.width, event.height);
     });
 }
 
 fn print_window_descriptor(window_descriptor: Res<WindowDescriptor>) {
-    println!("{}", window_descriptor.width);
-    println!("{}", window_descriptor.height);
+    // println!("{}", window_descriptor.width);
+    // println!("{}", window_descriptor.height);
 }
 
 fn ball_collision_system(
@@ -184,19 +210,24 @@ fn ball_collision_system(
             };
 
             use Collision::*;
-            let (reflect_x, refrect_y) = match direction {
+            let (reflect_x, reflect_y) = match direction {
                 Left => (ball.velocity.x > 0.0, false),
                 Right => (ball.velocity.x < 0.0, false),
                 Top => (false, ball.velocity.y < 0.0),
                 Bottom => (false, ball.velocity.y > 0.0),
             };
 
-            if reflect_x {
-                ball.velocity.x *= -1.;
-            };
-            if refrect_y {
-                ball.velocity.y *= -1.;
-            }
+            let reflection_multiplier =
+                Vec2::new(sign_from_bool(reflect_x), sign_from_bool(reflect_y));
+            ball.velocity *= reflection_multiplier;
         }
+    }
+}
+
+const fn sign_from_bool(boolean: bool) -> f32 {
+    if boolean {
+        -1.0
+    } else {
+        1.0
     }
 }
