@@ -1,5 +1,8 @@
+use std::unimplemented;
+
 use bevy::{
     prelude::*,
+    sprite::collide_aabb::{collide, Collision},
     window::{self, WindowMode},
 };
 use window::WindowResized;
@@ -13,11 +16,16 @@ fn main() {
         .add_system(paddle_movement_system.system())
         .add_system(print_window_descriptor.system())
         .add_system(window_resize_listenr.system())
+        .add_system(ball_collision_system.system())
         .run()
 }
 
 struct Ball {
     velocity: Vec2,
+}
+enum Collider {
+    Paddle,
+    Wall,
 }
 
 impl Default for Ball {
@@ -119,7 +127,8 @@ fn spawn_paddle(commands: &mut Commands, player: Player) {
             ..Default::default()
         })
         .with(player)
-        .with(Paddle);
+        .with(Paddle)
+        .with(Collider::Paddle);
 }
 
 fn paddle_movement_system(
@@ -155,4 +164,39 @@ fn window_resize_listenr(
 fn print_window_descriptor(window_descriptor: Res<WindowDescriptor>) {
     println!("{}", window_descriptor.width);
     println!("{}", window_descriptor.height);
+}
+
+fn ball_collision_system(
+    mut ball_query: Query<(&mut Ball, &Transform, &Sprite)>,
+    collider_query: Query<(&Collider, &Transform, &Sprite)>,
+) {
+    for (mut ball, ball_transform, ball_sprite) in ball_query.iter_mut() {
+        for (_collider, collider_transform, collider_sprite) in collider_query.iter() {
+            let collision = collide(
+                ball_transform.translation,
+                ball_sprite.size,
+                collider_transform.translation,
+                collider_sprite.size,
+            );
+            let direction = match collision {
+                Some(direction) => direction,
+                None => continue,
+            };
+
+            use Collision::*;
+            let (reflect_x, refrect_y) = match direction {
+                Left => (ball.velocity.x > 0.0, false),
+                Right => (ball.velocity.x < 0.0, false),
+                Top => (false, ball.velocity.y < 0.0),
+                Bottom => (false, ball.velocity.y > 0.0),
+            };
+
+            if reflect_x {
+                ball.velocity.x *= -1.;
+            };
+            if refrect_y {
+                ball.velocity.y *= -1.;
+            }
+        }
+    }
 }
