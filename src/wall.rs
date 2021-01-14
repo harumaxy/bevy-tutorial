@@ -18,8 +18,7 @@ impl Wall {
     ) {
         let window_height = resize_event.height as f32;
         let window_width = resize_event.width as f32;
-        let vertical_distance_from_center =
-            (window_height / 2. - Self::THICKNESS) - (Self::THICKNESS / 2.);
+        let vertical_distance_from_center = (window_height / 2. - Self::THICKNESS / 2.);
         let y_translation = match self {
             Wall::Top => vertical_distance_from_center,
             Wall::Bottom => -vertical_distance_from_center,

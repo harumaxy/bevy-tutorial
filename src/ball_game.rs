@@ -47,12 +47,12 @@ impl Default for Ball {
     }
 }
 
-fn setup(commands: &mut Commands) {
+fn setup(commands: &mut Commands, mut materials: ResMut<Assets<ColorMaterial>>) {
     commands.spawn(Camera2dBundle::default());
     spawn_ball(commands);
-    spawn_paddle(commands, Player::Right);
-    spawn_paddle(commands, Player::Left);
-    spwan_goals(commands);
+    spawn_paddle(commands, Player::Right, &mut materials);
+    spawn_paddle(commands, Player::Left, &mut materials);
+    spwan_goals(commands, &mut materials);
     spwan_walls(commands);
     commands.insert_resource(ClearColor(Color::BLACK)); // clear up Background Color (default = DARK_GRAY)
     commands.insert_resource(EventReader::<WindowResized>::default());

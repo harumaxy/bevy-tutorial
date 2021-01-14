@@ -1,4 +1,4 @@
-use bevy::{prelude::*, window::WindowResized};
+use bevy::{asset::HandleId, prelude::*, window::WindowResized};
 
 use crate::Collider;
 
@@ -28,16 +28,20 @@ impl Goal {
     }
 }
 
-pub fn spwan_goals(commands: &mut Commands) {
-    spwan_goal(commands, Goal::Left);
-    spwan_goal(commands, Goal::Right);
+pub fn spwan_goals(commands: &mut Commands, materials: &mut ResMut<Assets<ColorMaterial>>) {
+    spwan_goal(commands, Goal::Left, materials);
+    spwan_goal(commands, Goal::Right, materials);
 }
 
-fn spwan_goal(commands: &mut Commands, goal: Goal) {
+fn spwan_goal(commands: &mut Commands, goal: Goal, materials: &mut ResMut<Assets<ColorMaterial>>) {
     commands
         .spawn(SpriteBundle {
             sprite: Default::default(),
             transform: Default::default(),
+            material: materials.add(match goal {
+                Goal::Left => ColorMaterial::color(Color::RED),
+                Goal::Right => ColorMaterial::color(Color::BLUE),
+            }),
             ..Default::default()
         })
         .with(goal);

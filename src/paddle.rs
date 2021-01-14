@@ -53,7 +53,11 @@ pub fn paddle_movement_system(
 
 pub type PaddleBundle = (SpriteBundle, Paddle, Player, Collider);
 
-pub fn spawn_paddle(commands: &mut Commands, player: Player) {
+pub fn spawn_paddle(
+    commands: &mut Commands,
+    player: Player,
+    materials: &mut ResMut<Assets<ColorMaterial>>,
+) {
     let (sprite_bundle, paddle, player, collider): PaddleBundle = (
         SpriteBundle {
             sprite: Sprite {
@@ -64,6 +68,10 @@ pub fn spawn_paddle(commands: &mut Commands, player: Player) {
                 translation: player.start_position().extend(0.),
                 ..Default::default()
             },
+            material: materials.add(match player {
+                Player::Left => ColorMaterial::color(Color::RED),
+                Player::Right => ColorMaterial::color(Color::BLUE),
+            }),
             ..Default::default()
         },
         Paddle { speed: 1280. / 3. },
